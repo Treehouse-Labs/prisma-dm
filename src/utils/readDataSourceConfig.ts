@@ -2,6 +2,8 @@ import { readFileSync, statSync, readdirSync } from "fs";
 import { join } from "path";
 
 import {
+  Config,
+  ConfigBlock,
   parsePrismaSchema,
   readStringArgument,
   SchemaArgument,
@@ -10,6 +12,7 @@ import { DataSourceConfig } from "../services/DB";
 import isSupportedDatasourceProvider, {
   SUPPORTED_DATASOURCE_PROVIDERS,
 } from "./isSupportedDatasourceProvider";
+import { readDatabaseUrlFromPrismaConfig } from "./readPrismaConfig";
 
 /**
  * Reads a schema argument and resolves any env() function calls.
@@ -50,7 +53,7 @@ function readArgumentWithEnv(arg: SchemaArgument): string {
  * @param schemaPath
  * @returns
  */
-export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
+export async function readDataSourceConfig(schemaPath: string): Promise<DataSourceConfig> {
   let schemaContent: string;
   const stats = statSync(schemaPath);
 
@@ -63,34 +66,18 @@ export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
 
   const schemaAst = parsePrismaSchema(schemaContent);
 
-  const datasourceDeclaration = schemaAst.declarations.find((decl) => decl.kind === "datasource");
+  const datasourceDeclaration = schemaAst.declarations.find((decl) => decl.kind === "datasource") as ConfigBlock;
+  const providerDeclaration = datasourceDeclaration.members.find((member) => member.kind === 'config' && member.name.value === "provider") as Config;
+  const urlDeclaration = datasourceDeclaration.members.find((member) => member.kind === 'config' && member.name.value === "url") as Config;
 
-  const providerDeclaration =
-    "members" in datasourceDeclaration
-      ? datasourceDeclaration.members.find(
-          (member) => "name" in member && member.name.value === "provider",
-        )
-      : null;
-
-  const urlDeclaration =
-    "members" in datasourceDeclaration
-      ? datasourceDeclaration.members.find(
-          (member) => "name" in member && member.name.value === "url",
-        )
-      : null;
-
-  if (!providerDeclaration || !urlDeclaration) {
+  if (!providerDeclaration) {
     throw new Error(
-      "Datasource declaration must include both 'provider' and 'url' configurations.",
+      "Datasource declaration must include a 'provider' configuration.",
     );
   }
 
-  if (!("value" in providerDeclaration) || !("value" in urlDeclaration)) {
-    throw new Error("'provider' and 'url' must be config declarations with values.");
-  }
-
   const provider = readArgumentWithEnv(providerDeclaration.value);
-  const url = readArgumentWithEnv(urlDeclaration.value);
+  const url = urlDeclaration ? readArgumentWithEnv(urlDeclaration.value) : await readDatabaseUrlFromPrismaConfig();
 
   if (!isSupportedDatasourceProvider(provider)) {
     throw new Error(

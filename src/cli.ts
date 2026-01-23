@@ -8,7 +8,6 @@ import { ScriptRunner } from "./services/ScriptRunner";
 import { TargetedPrismaMigrator } from "./services/TargetedPrismaMigrator";
 import { Validator } from "./services/Validator";
 import { Command } from "commander";
-import { readDataSourceConfig } from "./utils/readDataSourceConfig";
 import packageJson from "../package.json";
 import dotenv from "dotenv";
 

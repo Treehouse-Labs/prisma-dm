@@ -7,11 +7,7 @@ import {
   Config,
   formatAst,
   CommentBlock,
-  ConfigBlockMember,
 } from "@loancrate/prisma-schema-parser";
-import { DataSourceConfig } from "../services/DB";
-import { prismaSqliteURLToFilePath } from "./prismaSqliteURLToFilePath";
-import { ConfigSchema } from "../config/config.type";
 import path from "path";
 
 function isClientGenerator(decl: SchemaDeclaration): boolean {
@@ -22,7 +18,7 @@ function isClientGenerator(decl: SchemaDeclaration): boolean {
         member.kind === "config" &&
         member.name.value === "provider" &&
         member.value.kind === "literal" &&
-        member.value.value === "prisma-client-js",
+        (member.value.value === "prisma-client-js" || member.value.value === "prisma-client"),
     )
   );
 }
@@ -35,7 +31,7 @@ function updateGenerator(ast: PrismaSchema, clientOutputPath: string): PrismaSch
   const astCopy = structuredClone(ast);
   const clientGenerators = astCopy.declarations.filter((decl) => isClientGenerator(decl));
   if (clientGenerators.length !== 1) {
-    throw new Error("The schema must contain exactly one generator block for prisma-client-js.");
+    throw new Error("The schema must contain exactly one generator block for prisma-client-js or prisma-client.");
   }
 
   let generator = clientGenerators[0];
