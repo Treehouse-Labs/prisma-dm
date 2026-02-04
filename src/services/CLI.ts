@@ -131,7 +131,7 @@ export class CLI<T extends string> {
     const dataMigrations = migrations.filter((m) => this.validator.isMigrationWithPostScript(m));
 
     const dataSource = await readDataSourceConfig(this.config.mainPrismaSchema);
-    await this.db.connect(dataSource, this.config);
+    await this.db.connect(dataSource);
 
     for (const migrationName of dataMigrations as T[]) {
       const prismaTableExists = await this.db.isPrismaMigrationsTableExists();

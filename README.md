@@ -186,17 +186,7 @@ The configuration file (`prisma-dm.config.json`) allows customization of the lib
 
 ## Database Support
 
-The library includes built-in support for the following databases. Only PostgreSQL has been fully tested and verified in production-like environments at this time; others are supported by the codebase but have not yet been validated end-to-end.
-
-| Database             | Supported | Tested & 100% working |
-| -------------------- | :-------: | :-------------------: |
-| PostgreSQL           |    ✅     |    ✅ Fully tested    |
-| Microsoft SQL Server |    ✅     |   ⛔ Not tested yet   |
-| MySQL                |    ✅     |   ⛔ Not tested yet   |
-| MariaDB              |    ✅     |   ⛔ Not tested yet   |
-| SQLite               |    ✅     |   ⛔ Not tested yet   |
-
-Community help welcome: if you verify that any of the untested databases work end-to-end with your setup, please open a Pull Request updating this section of the README with the result (include versions and any notes). This helps everyone benefit from broader coverage.
+This library supports PostgreSQL only.
 
 ## Warnings and Considerations
 
@@ -215,10 +205,7 @@ Community help welcome: if you verify that any of the untested databases work en
 
 - **Database support**:
 
-  - Built-in support exists for PostgreSQL, Microsoft SQL Server, MySQL, MariaDB, and SQLite.
-  - See the [Database Support](#database-support) section for details on testing status.
-  - If you successfully validate another database, please open a PR to update the support matrix above and share your findings.
-  - Some databases may still require additional logic based on real-world feedback; contributions are welcome.
+  - This library supports PostgreSQL only.
 
 - **Future improvements**:
   - Plans to track post scripts in a dedicated database table to improve reliability. Community contributions are highly encouraged.
