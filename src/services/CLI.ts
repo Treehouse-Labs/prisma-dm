@@ -133,28 +133,43 @@ export class CLI<T extends string> {
     const dataSource = await readDataSourceConfig(this.config.mainPrismaSchema);
     await this.db.connect(dataSource);
 
+    const prismaTableExists = await this.db.isPrismaMigrationsTableExists();
+
     for (const migrationName of dataMigrations as T[]) {
-      const prismaTableExists = await this.db.isPrismaMigrationsTableExists();
       let migration: MigrationModel | null = null;
 
       if (prismaTableExists) {
         migration = await this.db.getMigrationByName(migrationName);
       }
 
-      const migrationAppliedCount = prismaTableExists ? (migration?.applied_steps_count ?? 0) : 0;
+      // Skip already-applied migrations to avoid expensive prisma migrate deploy calls
+      if (migration && migration.finished_at !== null) {
+        this.logger.logVerbose(`Migration already applied, skipping: ${migrationName}`);
+        continue;
+      }
 
       await this.migrator.migrateTo(migrationName);
       const newMigration = await this.db.getMigrationByName(migrationName);
       const newMigrationAppliedCount = newMigration?.applied_steps_count ?? 0;
 
-      if (migrationAppliedCount + 1 === newMigrationAppliedCount) {
+      if (newMigrationAppliedCount > 0) {
         this.logger.logInfo(`Executing post-migrate script for migration: ${migrationName}`);
         this.scriptRunner.runPostScript(this.getMigrationPath(migrationName));
       }
     }
 
-    if (dataMigrations.at(-1) !== migrations.at(-1)) {
-      await this.migrator.migrateTo(migrations.at(-1) as T);
+    // Check if the final migration target still needs to be applied
+    const lastMigration = migrations.at(-1) as T;
+    const needsFinalMigrate = dataMigrations.at(-1) !== lastMigration;
+    if (needsFinalMigrate) {
+      const allApplied = prismaTableExists
+        ? await this.db.areAllMigrationsApplied(migrations)
+        : false;
+      if (!allApplied) {
+        await this.migrator.migrateTo(lastMigration);
+      } else {
+        this.logger.logVerbose("All migrations already applied, skipping final migrate deploy");
+      }
     }
 
     await this.db.disconnect();

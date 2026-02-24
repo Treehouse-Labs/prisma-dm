@@ -47,4 +47,19 @@ export class DB {
 
     return migration ?? null;
   }
+
+  async areAllMigrationsApplied(migrationNames: string[]): Promise<boolean> {
+    if (!this.knex) {
+      throw new Error("Database connection is not established. Call connect() first.");
+    }
+
+    const appliedCount = await this.knex<MigrationModel>("_prisma_migrations")
+      .whereIn("migration_name", migrationNames)
+      .whereNotNull("finished_at")
+      .whereNull("rolled_back_at")
+      .count("* as count")
+      .first();
+
+    return Number(appliedCount?.count) === migrationNames.length;
+  }
 }
