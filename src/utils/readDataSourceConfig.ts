@@ -22,7 +22,7 @@ import { readDatabaseUrlFromPrismaConfig } from "./readPrismaConfig";
 function readArgumentWithEnv(arg: SchemaArgument): string {
   if (arg.kind === "literal") {
     if (typeof arg.value !== "string") {
-      throw new Error("Expected a string literal for provider or url.");
+      throw new Error("Expected a string literal for provider.");
     }
 
     return arg.value;
@@ -43,13 +43,14 @@ function readArgumentWithEnv(arg: SchemaArgument): string {
     return envValue;
   }
 
-  throw new Error(
-    "Only string literals and env() function calls are supported for provider and url.",
-  );
+  throw new Error("Only string literals and env() function calls are supported.");
 }
 
 /**
  * Reads the datasource configuration (provider and url) from a Prisma schema file.
+ *
+ * Provider is read from schema, while URL is always resolved via `prisma.config.ts`
+ * so all prisma-dm DB access flows through Prisma's datasource config in one place.
  * @param schemaPath
  * @returns
  */
@@ -68,7 +69,6 @@ export async function readDataSourceConfig(schemaPath: string): Promise<DataSour
 
   const datasourceDeclaration = schemaAst.declarations.find((decl) => decl.kind === "datasource") as ConfigBlock;
   const providerDeclaration = datasourceDeclaration.members.find((member) => member.kind === 'config' && member.name.value === "provider") as Config;
-  const urlDeclaration = datasourceDeclaration.members.find((member) => member.kind === 'config' && member.name.value === "url") as Config;
 
   if (!providerDeclaration) {
     throw new Error(
@@ -77,7 +77,7 @@ export async function readDataSourceConfig(schemaPath: string): Promise<DataSour
   }
 
   const provider = readArgumentWithEnv(providerDeclaration.value);
-  const url = urlDeclaration ? readArgumentWithEnv(urlDeclaration.value) : await readDatabaseUrlFromPrismaConfig();
+  const url = await readDatabaseUrlFromPrismaConfig();
 
   if (!isSupportedDatasourceProvider(provider)) {
     throw new Error(
